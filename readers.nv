@@ -95,5 +95,3 @@ class Csv
 	def array<str> get_col(str col_name)
 		return self.elem[self.col_to_id[col_name]]
 
-	def void disown()
-		print("DISOWN CSV")
