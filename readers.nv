@@ -1,6 +1,6 @@
 class Csv
 	int fd, col
-	charv[16384] buf
+	char[16384] buf
 	i64 bytes_read
 	str cur_buffer, fname
 	array<str> header
@@ -37,7 +37,7 @@ class Csv
 			int mask = 0, pos = 0, last_pos = 0
 			while pos<self.bytes_read
 				vec<i8,32> bytes = simd_load(
-									self.buf+pos, i8, 32
+									self.buf offby pos, i8, 32
 								   )
 				vec<i8,32> v_comma = vec_make(
 									self.sep, 32
@@ -76,21 +76,24 @@ class Csv
 			)
 		char delimiter = self.buf[pos]
 
-		str view = {self.cur_buffer offby offset, size}
+		str _view = {self.cur_buffer offby offset, size}
 		if self.elem.size()<=self.col
 			array<str> new_col
 			self.elem.append(new_col)
-			self.header.append(view)
-			self.col_to_id[view] = self.col
+			self.header.append(_view)
+			self.col_to_id[_view] = self.col
 		else
-			self.elem[self.col].append(view)
+			self.elem[self.col].append(_view)
 
 		self.col = self.col + 1
 		if delimiter=='\n'
 			self.col = 0
 
-	def array<str> get_cols(str col_name)
+	def array<str> get_cols()
 		return self.header
 
 	def array<str> get_col(str col_name)
 		return self.elem[self.col_to_id[col_name]]
+
+	def void disown()
+		print("DISOWN CSV")
