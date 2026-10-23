@@ -77,7 +77,6 @@ class Csv
 				while last_pos < self.bytes_read
 					int next_pos = last_pos
 					
-					# Scan forward for the next delimiter
 					while next_pos < self.bytes_read
 						char c = self.buf[next_pos]
 						if c == self.sep or c == '\n'
