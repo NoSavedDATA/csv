@@ -47,19 +47,15 @@ class Csv
 
 			int mask = 0, pos = 0, last_pos = 0
 			
+			# SIMD path for >= 32 bytes
 			while pos + 32 <= self.bytes_read
-				vec<i8,32> bytes = simd_load(
-									self.buf offby pos, i8, 32
-								   )
-				vec<i8,32> v_comma = vec_make(
-									self.sep, 32
-								   )
+				vec<i8,32> bytes = simd_load(self.buf offby pos, i8, 32)
+				vec<i8,32> v_comma = vec_make(self.sep, 32)
 				vec<i8,32> v_break = vec_make('\n', 32)
 
-				vec<i8,32> v_mask = (v_comma==bytes) or
-									(v_break==bytes)
-
+				vec<i8,32> v_mask = (v_comma==bytes) or (v_break==bytes)
 				mask = v_mask.movemask()
+				
 				if mask==0
 					pos = pos + 32
 					continue
@@ -69,22 +65,30 @@ class Csv
 					int idx = ctz(mask)
 					pos = offset + idx
 
-					self.process_delimiter(
-							last_pos,
-							pos,
-							pos-last_pos
-						)
+					self.process_delimiter(last_pos, pos, pos-last_pos)
 
 					last_pos = pos + 1
 					mask = swap_bit(mask, idx)
 				
 				pos = offset + 32
 
+			# If file ended, manually parse the final <32 bytes
 			if newly_read == 0
-				if last_pos < self.bytes_read
-					self.process_delimiter(last_pos, self.bytes_read, self.bytes_read - last_pos)
+				while last_pos < self.bytes_read
+					int next_pos = last_pos
+					
+					# Scan forward for the next delimiter
+					while next_pos < self.bytes_read
+						char c = self.buf[next_pos]
+						if c == self.sep or c == '\n'
+							break
+						next_pos = next_pos + 1
+					
+					self.process_delimiter(last_pos, next_pos, next_pos - last_pos)
+					last_pos = next_pos + 1
 				break
 
+			# Carry over unprocessed bytes at the chunk boundary
 			self.carry_over = self.bytes_read - last_pos
 			if self.carry_over > 0
 				for i=0, i<self.carry_over
